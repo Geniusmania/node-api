@@ -10,6 +10,7 @@ const dotenv = require('dotenv');
 const userRoute = require('./routes/User.js');
 const productRoute = require('./routes/Product.js');
 const orderRoute = require('./routes/Orders.js');
+const authRoute = require('./authentication/login.js');
 dotenv.config();
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(express.json());
@@ -29,6 +30,9 @@ app.use('/api/products', productRoute);
 
 //orders
 app.use('/api/orders', orderRoute);
+
+//auth Routes
+app.use('/api/auth', authRoute);
 
 
 

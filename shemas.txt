@@ -1,0 +1,94 @@
+// ✅ Wishlist Schema
+const mongoose = require('mongoose');
+
+const wishlistSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  products: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Product' }]
+}, { timestamps: true });
+
+module.exports = mongoose.model('Wishlist', wishlistSchema);
+
+// ✅ Notification Schema
+const notificationSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  type: { type: String, enum: ['order', 'promotion', 'general'], required: true },
+  message: { type: String, required: true },
+  read: { type: Boolean, default: false }
+}, { timestamps: true });
+
+module.exports = mongoose.model('Notification', notificationSchema);
+
+// ✅ Audit Logs Schema
+const auditLogSchema = new mongoose.Schema({
+  action: { type: String, required: true },
+  performedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  details: { type: String },
+  timestamp: { type: Date, default: Date.now }
+});
+
+module.exports = mongoose.model('AuditLog', auditLogSchema);
+
+// ✅ Refund/Return Schema
+const refundSchema = new mongoose.Schema({
+  order: { type: mongoose.Schema.Types.ObjectId, ref: 'Order', required: true },
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  reason: { type: String, required: true },
+  status: { type: String, enum: ['requested', 'approved', 'rejected', 'completed'], default: 'requested' },
+  processedAt: { type: Date }
+}, { timestamps: true });
+
+module.exports = mongoose.model('Refund', refundSchema);
+
+// ✅ Shipping Methods Schema
+const shippingMethodSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  price: { type: Number, required: true },
+  estimatedDelivery: { type: String, required: true }
+});
+
+module.exports = mongoose.model('ShippingMethod', shippingMethodSchema);
+
+// ✅ Vendor Schema (Multi-vendor support)
+const vendorSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true },
+  phone: { type: String },
+  address: { type: String },
+  active: { type: Boolean, default: true }
+}, { timestamps: true });
+
+module.exports = mongoose.model('Vendor', vendorSchema);
+
+// ✅ Product Variants Schema
+const productVariantSchema = new mongoose.Schema({
+  product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
+  variantType: { type: String, required: true },
+  variantValue: { type: String, required: true },
+  additionalPrice: { type: Number, default: 0 }
+});
+
+module.exports = mongoose.model('ProductVariant', productVariantSchema);
+
+// ✅ Analytics Schema
+const analyticsSchema = new mongoose.Schema({
+  metric: { type: String, required: true },
+  value: { type: Number, required: true },
+  recordedAt: { type: Date, default: Date.now }
+});
+
+module.exports = mongoose.model('Analytics', analyticsSchema);
+
+// ✅ User Roles & Permissions Schema
+const roleSchema = new mongoose.Schema({
+  roleName: { type: String, required: true },
+  permissions: [{ type: String }]
+});
+
+module.exports = mongoose.model('Role', roleSchema);
+
+const userRoleSchema = new mongoose.Schema({
+  user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  role: { type: mongoose.Schema.Types.ObjectId, ref: 'Role', required: true }
+});
+
+module.exports = mongoose.model('UserRole', userRoleSchema);
