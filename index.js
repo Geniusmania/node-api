@@ -7,7 +7,32 @@ const bodyParser = require('body-parser');
 const dbseeder = require('./dbseeder.js');
 app.use(bodyParser.json());
 const dotenv = require('dotenv');
+const userRoute = require('./routes/User.js');
+const productRoute = require('./routes/Product.js');
+const orderRoute = require('./routes/Orders.js');
 dotenv.config();
+app.use(bodyParser.urlencoded({extended: true}));
+app.use(express.json());
+
+
+
+
+
+
+
+app.use('/api/seed',dbseeder)
+//  /login /register /profile /updateprofile /deleteprofile(only admin(/:id)) /getallusers(only admin) /getuserallusers(only admin(/))
+app.use('/api/users', userRoute)
+
+//producst
+app.use('/api/products', productRoute);
+
+//orders
+app.use('/api/orders', orderRoute);
+
+
+
+
 
 
 
@@ -17,19 +42,6 @@ mongoose.connect(process.env.mongoDB).then(() => {
     app.listen(port, ()=>{
         console.log(`Server is running on port ${port}`);
     })
-
-
-
-
-
-
-app.use('/api/seed',dbseeder)
-
-
-
-
-
-
 
 })
 
