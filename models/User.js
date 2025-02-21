@@ -6,9 +6,12 @@ const userSchema = new mongoose.Schema({
   last_name: {type: String },  
   username: {type: String,},
   phone: {type: String }, 
+  verified: {type: Boolean, default: false},
 email: {type: String, required: true, unique: true},
 password: {type: String, required: true},
-isAdmin:{type: Boolean, default: false}
+isAdmin:{type: Boolean, default: false},
+verificationToken: {type: String},
+verificationTokenExpires: {type: Date},
 },
 {timestamps: true}
 
