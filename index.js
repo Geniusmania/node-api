@@ -1,11 +1,10 @@
 const express = require('express');
 const { default: mongoose } = require('mongoose');
 const app = express();
-
+const cors = require('cors');
 const port = process.env.PORT || 3000;
 const bodyParser = require('body-parser');
 const dbseeder = require('./dbseeder.js');
-app.use(bodyParser.json());
 const dotenv = require('dotenv');
 const userRoute = require('./routes/User.js');
 const productRoute = require('./routes/Product.js');
@@ -14,6 +13,8 @@ const authRoute = require('./authentication/login.js');
 dotenv.config();
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(express.json());
+app.use(cors());
+app.use(bodyParser.json());
 
 
 
@@ -40,14 +41,18 @@ app.use('/api/auth', authRoute);
 
 
 
-mongoose.connect(process.env.mongoDB).then(() => {
+mongoose.connect('mongodb+srv://pbaidoopb10:mania123@cluster0.gjnuz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0').then(() => {
     console.log('db connected')
     console.log(process.env.PORT)
+    console.log('JWT_SECRET:', process.env.JWT_SECRET)
     app.listen(port, ()=>{
         console.log(`Server is running on port ${port}`);
     })
 
-})
+}
+
+
+)
 
 
 
