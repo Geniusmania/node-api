@@ -4,60 +4,8 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 const generateToken = require("../tokens/TokenGenerate");
 const protect = require("./middleware/Auth");
-//User login Route
-userRoute.post("/login", async (req, res) => {
-	const { email, password } = req.body;
 
-	const user = await User.findOne({ email });
-	try {
-		if (user && (await user.matchPassword(password))) {
-			res.json({
-				_id: user._id,
-				name: user.name,
-				email: user.email,
-				isAdmin: user.isAdmin,
-				token: generateToken(user._id),
-				createdAt: user.createdAt,
-				updatedAt: user.updatedAt,
-			});
-		}
-	} catch (error) {
-		res.status(401).json({ error: error.message });
-	}
-});
 
-//User Register Route
-userRoute.post("/register", async (req, res) => {
-	const { name, email, password } = req.body;
-	const userExists = await User.findOne({
-		email,
-	});
-
-	try {
-		if (userExists) {
-			res.status(400).json({ error: "User already exists" });
-		} else {
-			const user = await User.create({
-				name,
-				email,
-				password,
-			});
-			if (user) {
-				res.status(201).json({
-					_id: user._id,
-					name: user.name,
-					email: user.email,
-					isAdmin: user.isAdmin,
-					token: null,
-					createdAt: user.createdAt,
-					updatedAt: user.updatedAt,
-				});
-			}
-		}
-	} catch (error) {
-		res.status(500).json({ error: error.message });
-	}
-});
 
 //User Profile Route
 userRoute.get("/profile", protect, async (req, res) => {
@@ -65,7 +13,10 @@ userRoute.get("/profile", protect, async (req, res) => {
 	if (user) {
 		res.status(200).json({
 			_id: user._id,
-			name: user.name,
+			first_name: user.first_name,
+			last_name: user.last_name,
+			username: user.username,
+			phone: user.phone,
 			email: user.email,
 			isAdmin: user.isAdmin,
 			createdAt: user.createdAt,
@@ -76,19 +27,36 @@ userRoute.get("/profile", protect, async (req, res) => {
 	}
 });
 
+//get user by id
+userRoute.get("/:id", protect, async (req, res) => {
+	const user = await User.findById(req.params.id).select("-password");
+	if (user) {
+		res.json(user);
+	} else {
+		res.status(404);
+		throw new Error("User not found");
+	}
+});
+
 //User Update Profile Route
 userRoute.put("/profile", protect, async (req, res) => {
 	const user = await User.findById(req.user._id);
 	if (user) {
-		user.name = req.body.name || user.name;
+		user.first_name = req.body.first_name || user.first_name;
+		user.last_name = req.body.last_name || user.last_name;
 		user.email = req.body.email || user.email;
+		user.username = req.body.username || user.username;
+		user.phone = req.body.phone || user.phone;
 		if (req.body.password) {
 			user.password = req.body.password;
 		}
 		const updatedUser = await user.save();
 		res.json({
 			_id: updatedUser._id,
-			name: updatedUser.name,
+			first_name: updatedUser.first_name,
+			last_name: updatedUser.last_name,
+			username: updatedUser.username,
+			phone: updatedUser.phone,
 			email: updatedUser.email,
 			isAdmin: updatedUser.isAdmin,
 			createdAt: updatedUser.createdAt,
@@ -109,10 +77,11 @@ userRoute.get("/", protect, async (req, res) => {
 
 //Delete user
 userRoute.delete("/:id", protect, async (req, res) => {
-	const user = await User.findById(req.params.id);
-	if (user) {
-		await user.remove();
-		res.json({ message: "User removed" });
+	const user = await User.findByIdAndDelete(req.params.id);
+	if (!user) {
+		//await user.deleteOne();
+
+		res.json({ message: "User not found" });
 	} else {
 		res.status(404);
 		throw new Error("User not found");
