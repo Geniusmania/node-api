@@ -21,7 +21,15 @@ productRoute.get("/:id", async (req, res) => {
 
 // add product
 productRoute.post("/", async (req, res) => {
-	const product = new Product(req.body);
+	const product = new Product({
+		id: id,
+		name: req.body.name,
+		old_price: req.body.old_price,
+		new_price: req.body.new_price,
+		description: req.body.description,
+		image: req.body.image,
+		category: req.body.category,
+	});
 	try {
 		await product.save();
 		res.status(201).json(product);
@@ -38,10 +46,10 @@ productRoute.put("/:id", async (req, res) => {
 		product.name = req.body.name || product.name;
 		product.price = req.body.price || product.price;
 		product.description = req.body.description || product.description;
-        product.image = req.body.image || product.image;
-        product.stock = req.body.stock || product.stock;
-        product.category = req.body.category || product.category;
-        product.rating = req.body.rating || product.rating;
+		product.image = req.body.image || product.image;
+		product.stock = req.body.stock || product.stock;
+		product.category = req.body.category || product.category;
+		product.rating = req.body.rating || product.rating;
 		try {
 			await product.save();
 			res.status(200).json(product);
