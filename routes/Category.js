@@ -60,7 +60,6 @@ categoryRouter.post('/addcategory', upload.single('image'), async (req, res) => 
             message: 'Category added successfully', 
             category: {
                 ...category.toObject(),
-                fullUrl: `${req.protocol}://${req.get('host')}${imageUrl}`
             }
         });
     } catch (error) {

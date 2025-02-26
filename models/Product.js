@@ -1,27 +1,66 @@
+// models/Product.js
 const mongoose = require('mongoose');
+const productAttributeSchema = require('./ProductAttribute');
+const productVariationSchema = require('./productVariation');
 
-const productSchema = new mongoose.Schema({
-  name: { type: String, required: true, trim: true },
-  description: { type: String, trim: true },
-  image: { type: String, required: true }, 
-  brand: { type: String, trim: true },
-  price: { type: Number, required: true, min: 0 },
-  discountPrice: { type: Number, min: 0 },
-  category: { type: String, required: true },
-  stock: { type: Number, required: true, min: 0 },
-  rating: { type: Number, default: 0, min: 0, max: 5 },
-  numReviews: { type: Number, default: 0 },
-  reviews: [
-    {
-      user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-      rating: { type: Number, required: true, min: 1, max: 5 },
-      comment: { type: String, trim: true },
-      createdAt: { type: Date, default: Date.now },
+const productSchema = new mongoose.Schema(
+  {
+    stock: {
+      type: Number,
+      required: true
     },
-  ],
-  seller: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-}, { timestamps: true });
+    sku: {
+      type: String,
+      trim: true
+    },
+    price: {
+      type: Number,
+      required: true
+    },
+    title: {
+      type: String,
+      required: true,
+      trim: true
+    },
+    date: {
+      type: Date,
+      default: Date.now
+    },
+    salePrice: {
+      type: Number,
+      required: true
+    },
+    thumbnail: {
+      type: String,
+      required: true
+    },
+    isFeatured: {
+      type: Boolean,
+      default: false
+    },
+    brand: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Brand'
+    },
+    description: {
+      type: String
+    },
+    images: [
+      {
+        type: String
+      }
+    ],
+    categoryId: {
+      type: String
+    },
+    productType: {
+      type: String,
+      required: true
+    },
+    productAttributes: [productAttributeSchema],
+    productVariations: [productVariationSchema]
+  },
+  { timestamps: true }
+);
 
-productSchema.index({ category: 1, price: 1 }); 
-
-module.exports = mongoose.model("Product", productSchema);
+module.exports = mongoose.model('Product', productSchema);
