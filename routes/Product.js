@@ -151,7 +151,7 @@ productRoute.put('/:id', upload.fields([{ name: 'thumbnail', maxCount: 1 }, { na
   }
 });
 
-// ✅ Delete a product
+//  Delete a product
 productRoute.delete('/:id', async (req, res) => {
   try {
     const product = await Product.findByIdAndDelete(req.params.id);
@@ -161,7 +161,7 @@ productRoute.delete('/:id', async (req, res) => {
     deleteImage(product.thumbnail);
     product.images.forEach(deleteImage);
 
-    // ✅ Decrease brand's product count
+    //  Decrease brand's product count
     if (product.brand) await Brand.findByIdAndUpdate(product.brand, { $inc: { productsCount: -1 } });
 
     res.json({ message: 'Product deleted successfully' });
@@ -171,3 +171,62 @@ productRoute.delete('/:id', async (req, res) => {
 });
 
 module.exports = productRoute;
+
+
+
+
+// {
+//   "_id": "67c070411861a069a96b65e4",
+//   "stock": 100,
+//   "sku": "sample-sku-123",
+//   "price": 99.9,
+//   "title": "Sample product",
+//   "salePrice": 89.9,
+//   "thumbnail": "1740664897826-asiucb.JPG",
+//   "isFeatured": true,
+//   "brand": {
+//       "_id": "67c055304aae473c8f732954",
+//       "name": "Nike",
+//       "image": "http://localhost:3000/uploads/brands/image_1740657968532.JPG",
+//       "isFeatured": true,
+//       "productsCount": 1,
+//       "createdAt": "2025-02-27T12:06:08.668Z",
+//       "updatedAt": "2025-02-27T14:01:38.186Z",
+//       "__v": 0
+//   },
+//   "description": "this is sample description",
+//   "images": [
+//       "1740664897828-GoDaddy.JPG",
+//       "1740664897831-media.JPG",
+//       "1740664897834-memo.JPG"
+//   ],
+//   "categoryId": "electronics",
+//   "productType": "physical",
+//   "productAttributes": [
+//       {
+//           "name": "color",
+//           "values": [
+//               "red",
+//               "blue"
+//           ],
+//           "_id": "67c070411861a069a96b65e5"
+//       }
+//   ],
+//   "productVariations": [
+//       {
+//           "sku": "var1",
+//           "image": "image1.jpg",
+//           "price": 99.99,
+//           "salePrice": 89.99,
+//           "stock": 10,
+//           "attributeValues": {
+//               "color": "red"
+//           },
+//           "_id": "67c070411861a069a96b65e6"
+//       }
+//   ],
+//   "date": "2025-02-27T14:01:37.981Z",
+//   "createdAt": "2025-02-27T14:01:37.989Z",
+//   "updatedAt": "2025-02-27T14:01:37.989Z",
+//   "__v": 0
+// }
