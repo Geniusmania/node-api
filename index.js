@@ -12,6 +12,7 @@ const orderRoute = require('./routes/Orders.js');
 const authRoute = require('./authentication/login.js');
 const categoryRouter = require('./routes/Category.js');
 const bannerRoute = require('./routes/Banner.js');
+const brandRoute = require('./routes/Brand.js')
 const path = require('path');
 const fs = require('fs');
 
@@ -46,6 +47,9 @@ app.use('/api/users', userRoute);
 // Product routes
 app.use('/api/products', productRoute);
 
+//Brand routes
+app.use('/api/brands', brandRoute)
+
 // Order routes
 app.use('/api/orders', orderRoute);
 
@@ -71,7 +75,6 @@ mongoose.connect('mongodb+srv://pbaidoopb10:mania123@cluster0.gjnuz.mongodb.net/
         
         app.listen(port, () => {
             console.log(`Server is running on port ${port}`);
-            console.log(`Static files being served from: ${uploadsDir}`);
         });
     })
     .catch(err => {
