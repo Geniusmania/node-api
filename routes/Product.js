@@ -1,173 +1,553 @@
-const express = require('express');
+// routes/productRoutes.js
+const express = require("express");
 const productRoute = express.Router();
-const multer = require('multer');
-const fs = require('fs');
-const path = require('path');
-const Product = require('../models/Product');
-const Brand = require('../models/Brand');
+const Product = require("../models/Product");
+const Brand = require("../models/Brand");
+const { uploadProductImage, deleteImage } = require("../utils/multer/multer");
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: 'uploads/',
-  filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname}`)
+// Configure multiple image upload
+const uploadMultipleImages = uploadProductImage.fields([
+	{ name: "thumbnail", maxCount: 1 },
+	{ name: "images", maxCount: 10 },
+	{ name: "variationImages", maxCount: 20 },
+]);
+
+// Get all products with pagination
+productRoute.get("/", async (req, res) => {
+	try {
+		//const page = parseInt(req.query.page) || 1;
+		//const limit = parseInt(req.query.limit) || 10;
+		///const skip = (page - 1) * limit;
+
+		const filter = {};
+
+		// Apply filters if provided
+		if (req.query.brandId) filter.brand = req.query.brandId;
+		if (req.query.categoryId) filter.categoryId = req.query.categoryId;
+		if (req.query.featured) filter.isFeatured = req.query.featured === "true";
+
+		const products = await Product.find(filter)
+			.populate("brand", "name image")
+			.sort({ createdAt: -1 });
+
+		//const totalProducts = await Product.countDocuments(filter);
+
+		res.status(200).json(products);
+	} catch (error) {
+		res.status(500).json({
+			success: false,
+			message: "Error fetching products",
+			error: error.message,
+		});
+	}
 });
 
-const upload = multer({ storage });
+// Get featured products
+productRoute.get("/featured", async (req, res) => {
+	try {
+		const limit = parseInt(req.query.limit) || 10;
 
-// Helper function to delete images
-const deleteImage = (imagePath) => {
-  const fullPath = path.join(__dirname, '../uploads', imagePath);
-  if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
-};
+		const products = await Product.find({ isFeatured: true })
+			.populate("brand", "name image")
+			.sort({ createdAt: -1 })
+			.limit(limit);
 
-//  Check if SKU already exists
-const checkSKUExists = async (sku) => {
-  const existingProduct = await Product.findOne({ sku });
-  return !!existingProduct;
-};
-
-//  Create a new product
-productRoute.post('/', upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'images', maxCount: 10 }]), async (req, res) => {
-  try {
-    const { title, price, salePrice, description, brand, categoryId, productType, productAttributes, productVariations, sku, stock } = req.body;
-
-    // Check for required fields
-    if (!title || !price || !salePrice || !productType || !stock) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
-
-    // Check for thumbnail
-    if (!req.files['thumbnail']) {
-      return res.status(400).json({ message: 'Thumbnail is required' });
-    }
-
-    // Check for duplicate SKU
-    if (sku && await checkSKUExists(sku)) {
-      return res.status(400).json({ message: 'SKU already exists' });
-    }
-
-    // Parse productAttributes and productVariations
-    let parsedAttributes = [];
-    let parsedVariations = [];
-
-    try {
-      parsedAttributes = JSON.parse(productAttributes || '[]');
-      parsedVariations = JSON.parse(productVariations || '[]');
-    } catch (error) {
-      return res.status(400).json({ message: "Invalid JSON in productAttributes or productVariations" });
-    }
-
-    // Create the product
-    const product = new Product({
-      title,
-      price,
-      salePrice,
-      description,
-      brand,
-      categoryId,
-      productType,
-      stock,
-      sku,
-      productAttributes: parsedAttributes,
-      productVariations: parsedVariations,
-      thumbnail: req.files['thumbnail'][0].filename,
-      images: req.files['images'] ? req.files['images'].map(file => file.filename) : []
-    });
-
-    await product.save();
-
-    // Increase brand's product count
-    if (brand) {
-      await Brand.findByIdAndUpdate(brand, { $inc: { productsCount: 1 } });
-    }
-
-    res.status(201).json({ message: 'Product added successfully', product });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+		res.status(200).json({
+			success: true,
+			count: products.length,
+			data: products,
+		});
+	} catch (error) {
+		res.status(500).json({
+			success: false,
+			message: "Error fetching featured products",
+			error: error.message,
+		});
+	}
 });
 
+// Get products by brand
+productRoute.get("/brand/:brandId", async (req, res) => {
+	try {
+		const page = parseInt(req.query.page) || 1;
+		const limit = parseInt(req.query.limit) || 10;
+		const skip = (page - 1) * limit;
 
-// Get all products
-productRoute.get('/', async (req, res) => {
-  try {
-    const products = await Product.find().populate('brand');
-    res.json(products);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+		const products = await Product.find({ brand: req.params.brandId })
+			.populate("brand", "name image")
+			.sort({ createdAt: -1 })
+			.skip(skip)
+			.limit(limit);
+
+		const totalProducts = await Product.countDocuments({
+			brand: req.params.brandId,
+		});
+
+		res.status(200).json({
+			success: true,
+			count: products.length,
+			total: totalProducts,
+			pages: Math.ceil(totalProducts / limit),
+			currentPage: page,
+			data: products,
+		});
+	} catch (error) {
+		res.status(500).json({
+			success: false,
+			message: "Error fetching products by brand",
+			error: error.message,
+		});
+	}
 });
 
-// Get a single product
-productRoute.get('/:id', async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id).populate('brand');
-    if (!product) return res.status(404).json({ message: 'Product not found' });
-    res.json(product);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+// Get products by category
+productRoute.get("/category/:categoryId", async (req, res) => {
+	try {
+		const page = parseInt(req.query.page) || 1;
+		const limit = parseInt(req.query.limit) || 10;
+		const skip = (page - 1) * limit;
+
+		const products = await Product.find({ categoryId: req.params.categoryId })
+			.populate("brand", "name image")
+			.sort({ createdAt: -1 })
+			.skip(skip)
+			.limit(limit);
+
+		const totalProducts = await Product.countDocuments({
+			categoryId: req.params.categoryId,
+		});
+
+		res.status(200).json({
+			success: true,
+			count: products.length,
+			total: totalProducts,
+			pages: Math.ceil(totalProducts / limit),
+			currentPage: page,
+			data: products,
+		});
+	} catch (error) {
+		res.status(500).json({
+			success: false,
+			message: "Error fetching products by category",
+			error: error.message,
+		});
+	}
 });
 
-// Update a product
-productRoute.put('/:id', upload.fields([{ name: 'thumbnail', maxCount: 1 }, { name: 'images', maxCount: 10 }]), async (req, res) => {
-  try {
-    const product = await Product.findById(req.params.id);
-    if (!product) return res.status(404).json({ message: 'Product not found' });
+// Get single product by ID
+productRoute.get("/:id", async (req, res) => {
+	try {
+		const product = await Product.findById(req.params.id).populate(
+			"brand",
+			"name image"
+		);
+		if (!product) {
+			return res.status(404).json({
+				success: false,
+				message: "Product not found",
+			});
+		}
 
-    const { title, price, salePrice, description, brand, categoryId, productType, productAttributes, productVariations, sku, stock } = req.body;
-
-    // Check for duplicate SKU (excluding the current product)
-    if (sku && sku !== product.sku && await checkSKUExists(sku)) return res.status(400).json({ message: 'SKU already exists' });
-
-    // Handle thumbnail update
-    if (req.files['thumbnail']) {
-      deleteImage(product.thumbnail);
-      product.thumbnail = req.files['thumbnail'][0].filename;
-    }
-
-    // Handle images update
-    if (req.files['images']) {
-      product.images.forEach(deleteImage);
-      product.images = req.files['images'].map(file => file.filename);
-    }
-
-    //  Update brand's product count if brand changed
-    if (brand && brand !== product.brand) {
-      await Brand.findByIdAndUpdate(product.brand, { $inc: { productsCount: -1 } }); // Decrease old brand count
-      await Brand.findByIdAndUpdate(brand, { $inc: { productsCount: 1 } }); // Increase new brand count
-    }
-
-    Object.assign(product, {
-      title, price, salePrice, description, brand, categoryId, productType, stock, sku,
-      productAttributes: JSON.parse(productAttributes || '[]'),
-      productVariations: JSON.parse(productVariations || '[]')
-    });
-
-    await product.save();
-    res.json({ message: 'Product updated successfully', product });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+		res.status(200).json({
+			success: true,
+			data: product,
+		});
+	} catch (error) {
+		res.status(500).json({
+			success: false,
+			message: "Error fetching product",
+			error: error.message,
+		});
+	}
 });
 
-//  Delete a product
-productRoute.delete('/:id', async (req, res) => {
-  try {
-    const product = await Product.findByIdAndDelete(req.params.id);
-    if (!product) return res.status(404).json({ message: 'Product not found' });
+// Create new product
+productRoute.post("/", uploadMultipleImages, async (req, res) => {
+	try {
+		if (!req.files || !req.files.thumbnail) {
+			return res.status(400).json({
+				success: false,
+				message: "Product thumbnail is required",
+			});
+		}
 
-    // Delete associated images
-    deleteImage(product.thumbnail);
-    product.images.forEach(deleteImage);
+		// Parse the request body
+		const productData = JSON.parse(req.body.productData || "{}");
 
-    //  Decrease brand's product count
-    if (product.brand) await Brand.findByIdAndUpdate(product.brand, { $inc: { productsCount: -1 } });
+		// Check if brand exists
+		if (productData.brand) {
+			const brandExists = await Brand.findById(productData.brand);
+			if (!brandExists) {
+				return res.status(404).json({
+					success: false,
+					message: "Brand not found",
+				});
+			}
+		}
 
-    res.json({ message: 'Product deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+		// Prepare images array
+		const imagesArray = req.files.images
+			? req.files.images.map((file) => file.path)
+			: [];
+
+		// Process variations if any
+		let variations = [];
+		if (
+			productData.productVariations &&
+			Array.isArray(productData.productVariations)
+		) {
+			variations = productData.productVariations.map((variation, index) => {
+				// If variation image is provided in the request, use it
+				if (req.files.variationImages && req.files.variationImages[index]) {
+					variation.image = req.files.variationImages[index].path;
+				}
+
+				// Convert attributeValues from array to Map if needed
+				if (Array.isArray(variation.attributeValues)) {
+					variation.attributeValues = variation.attributeValues.reduce(
+						(map, attr) => {
+							map[attr.key] = attr.value;
+							return map;
+						},
+						{}
+					);
+				}
+
+				return variation;
+			});
+		}
+
+		// Create new product
+		const newProduct = new Product({
+			title: productData.title,
+			description: productData.description,
+			price: productData.price,
+			salePrice: productData.salePrice,
+			stock: productData.stock,
+			sku: productData.sku,
+			brand: productData.brand,
+			thumbnail: req.files.thumbnail[0].path,
+			images: imagesArray,
+			categoryId: productData.categoryId,
+			productType: productData.productType,
+			isFeatured: productData.isFeatured,
+			productAttributes: productData.productAttributes || [],
+			productVariations: variations,
+		});
+
+		const savedProduct = await newProduct.save();
+
+		// Update product count for the brand
+		if (productData.brand) {
+			await Brand.findByIdAndUpdate(productData.brand, {
+				$inc: { productsCount: 1 },
+			});
+		}
+
+		res.status(201).json({
+			success: true,
+			data: savedProduct,
+		});
+	} catch (error) {
+		res.status(500).json({
+			success: false,
+			message: "Error creating product",
+			error: error.message,
+		});
+	}
+});
+
+// Update product
+productRoute.put("/:id", uploadMultipleImages, async (req, res) => {
+	try {
+		const product = await Product.findById(req.params.id);
+		if (!product) {
+			return res.status(404).json({
+				success: false,
+				message: "Product not found",
+			});
+		}
+
+		// Parse the request body
+		const productData = JSON.parse(req.body.productData || "{}");
+
+		// Check if brand changed
+		let oldBrandId = null;
+		if (
+			productData.brand &&
+			product.brand &&
+			productData.brand !== product.brand.toString()
+		) {
+			oldBrandId = product.brand;
+		}
+
+		// Prepare images to update
+		let thumbnailToUpdate = product.thumbnail;
+		if (req.files && req.files.thumbnail) {
+			// Delete old thumbnail
+			await deleteImage(product.thumbnail);
+			thumbnailToUpdate = req.files.thumbnail[0].path;
+		}
+
+		// Update or keep existing images
+		let imagesToUpdate = [...product.images];
+		if (req.files && req.files.images && req.files.images.length > 0) {
+			// Delete old images if specified
+			if (productData.deleteAllImages) {
+				for (const img of product.images) {
+					await deleteImage(img);
+				}
+				imagesToUpdate = req.files.images.map((file) => file.path);
+			} else {
+				// Append new images
+				imagesToUpdate = [
+					...imagesToUpdate,
+					...req.files.images.map((file) => file.path),
+				];
+			}
+		}
+
+		// Process variations if any
+		let variationsToUpdate = [...product.productVariations];
+		if (
+			productData.productVariations &&
+			Array.isArray(productData.productVariations)
+		) {
+			if (productData.replaceAllVariations) {
+				// Delete old variation images
+				for (const variation of product.productVariations) {
+					if (variation.image) {
+						await deleteImage(variation.image);
+					}
+				}
+
+				variationsToUpdate = productData.productVariations.map(
+					(variation, index) => {
+						// If variation image is provided in the request, use it
+						if (req.files.variationImages && req.files.variationImages[index]) {
+							variation.image = req.files.variationImages[index].path;
+						}
+
+						// Convert attributeValues from array to Map if needed
+						if (Array.isArray(variation.attributeValues)) {
+							variation.attributeValues = variation.attributeValues.reduce(
+								(map, attr) => {
+									map[attr.key] = attr.value;
+									return map;
+								},
+								{}
+							);
+						}
+
+						return variation;
+					}
+				);
+			} else {
+				// Update only specified variations
+				variationsToUpdate = productData.productVariations.map((variation) => {
+					const existingVariation = product.productVariations.find(
+						(v) => v._id.toString() === variation._id
+					);
+
+					if (existingVariation) {
+						// Update existing variation
+						if (
+							req.files.variationImages &&
+							variation.imageIndex !== undefined
+						) {
+							// Delete old image if exists
+							if (existingVariation.image) {
+								deleteImage(existingVariation.image);
+							}
+							// Set new image
+							variation.image =
+								req.files.variationImages[variation.imageIndex].path;
+						} else {
+							// Keep existing image
+							variation.image = existingVariation.image;
+						}
+					}
+
+					// Convert attributeValues from array to Map if needed
+					if (Array.isArray(variation.attributeValues)) {
+						variation.attributeValues = variation.attributeValues.reduce(
+							(map, attr) => {
+								map[attr.key] = attr.value;
+								return map;
+							},
+							{}
+						);
+					}
+
+					return variation;
+				});
+			}
+		}
+
+		// Update product
+		const updatedProduct = await Product.findByIdAndUpdate(
+			req.params.id,
+			{
+				title: productData.title || product.title,
+				description: productData.description || product.description,
+				price: productData.price || product.price,
+				salePrice: productData.salePrice || product.salePrice,
+				stock:
+					productData.stock !== undefined ? productData.stock : product.stock,
+				sku: productData.sku || product.sku,
+				brand: productData.brand || product.brand,
+				thumbnail: thumbnailToUpdate,
+				images: imagesToUpdate,
+				categoryId: productData.categoryId || product.categoryId,
+				productType: productData.productType || product.productType,
+				isFeatured:
+					productData.isFeatured !== undefined
+						? productData.isFeatured
+						: product.isFeatured,
+				productAttributes:
+					productData.productAttributes || product.productAttributes,
+				productVariations: variationsToUpdate,
+			},
+			{ new: true }
+		);
+
+		// Update brand product counts if brand changed
+		if (oldBrandId) {
+			// Decrement old brand product count
+			await Brand.findByIdAndUpdate(oldBrandId, {
+				$inc: { productsCount: -1 },
+			});
+
+			// Increment new brand product count
+			await Brand.findByIdAndUpdate(productData.brand, {
+				$inc: { productsCount: 1 },
+			});
+		}
+
+		res.status(200).json({
+			success: true,
+			data: updatedProduct,
+		});
+	} catch (error) {
+		res.status(500).json({
+			success: false,
+			message: "Error updating product",
+			error: error.message,
+		});
+	}
+});
+
+// Delete product
+productRoute.delete("/:id", async (req, res) => {
+	try {
+		const product = await Product.findById(req.params.id);
+		if (!product) {
+			return res.status(404).json({
+				success: false,
+				message: "Product not found",
+			});
+		}
+
+		// Delete thumbnail
+		await deleteImage(product.thumbnail);
+
+		// Delete all product images
+		for (const image of product.images) {
+			await deleteImage(image);
+		}
+
+		// Delete all variation images
+		for (const variation of product.productVariations) {
+			if (variation.image) {
+				await deleteImage(variation.image);
+			}
+		}
+
+		// Update brand product count
+		if (product.brand) {
+			await Brand.findByIdAndUpdate(product.brand, {
+				$inc: { productsCount: -1 },
+			});
+		}
+
+		// Delete product from database
+		await Product.findByIdAndDelete(req.params.id);
+
+		res.status(200).json({
+			success: true,
+			message: "Product deleted successfully",
+		});
+	} catch (error) {
+		res.status(500).json({
+			success: false,
+			message: "Error deleting product",
+			error: error.message,
+		});
+	}
+});
+
+// Batch delete products
+productRoute.post("/batch-delete", async (req, res) => {
+	try {
+		const { ids } = req.body;
+
+		if (!ids || !Array.isArray(ids) || ids.length === 0) {
+			return res.status(400).json({
+				success: false,
+				message: "Product IDs are required",
+			});
+		}
+
+		// Get all products to delete
+		const products = await Product.find({ _id: { $in: ids } });
+
+		// Delete all images and update brand counts
+		const brandProductCounts = {};
+
+		for (const product of products) {
+			// Delete thumbnail
+			await deleteImage(product.thumbnail);
+
+			// Delete all product images
+			for (const image of product.images) {
+				await deleteImage(image);
+			}
+
+			// Delete all variation images
+			for (const variation of product.productVariations) {
+				if (variation.image) {
+					await deleteImage(variation.image);
+				}
+			}
+
+			// Track brand product counts
+			if (product.brand) {
+				const brandId = product.brand.toString();
+				brandProductCounts[brandId] = (brandProductCounts[brandId] || 0) + 1;
+			}
+		}
+
+		// Update brand product counts
+		for (const [brandId, count] of Object.entries(brandProductCounts)) {
+			await Brand.findByIdAndUpdate(brandId, {
+				$inc: { productsCount: -count },
+			});
+		}
+
+		// Delete products from database
+		await Product.deleteMany({ _id: { $in: ids } });
+
+		res.status(200).json({
+			success: true,
+			message: `${products.length} products deleted successfully`,
+		});
+	} catch (error) {
+		res.status(500).json({
+			success: false,
+			message: "Error batch deleting products",
+			error: error.message,
+		});
+	}
 });
 
 module.exports = productRoute;
@@ -175,58 +555,38 @@ module.exports = productRoute;
 
 
 
+
 // {
-//   "_id": "67c070411861a069a96b65e4",
-//   "stock": 100,
-//   "sku": "sample-sku-123",
-//   "price": 99.9,
-//   "title": "Sample product",
-//   "salePrice": 89.9,
-//   "thumbnail": "1740664897826-asiucb.JPG",
-//   "isFeatured": true,
-//   "brand": {
-//       "_id": "67c055304aae473c8f732954",
-//       "name": "Nike",
-//       "image": "http://localhost:3000/uploads/brands/image_1740657968532.JPG",
-//       "isFeatured": true,
-//       "productsCount": 1,
-//       "createdAt": "2025-02-27T12:06:08.668Z",
-//       "updatedAt": "2025-02-27T14:01:38.186Z",
-//       "__v": 0
-//   },
-//   "description": "this is sample description",
-//   "images": [
-//       "1740664897828-GoDaddy.JPG",
-//       "1740664897831-media.JPG",
-//       "1740664897834-memo.JPG"
-//   ],
-//   "categoryId": "electronics",
+//   "title": "Ultra HD Smart TV",
+//   "description": "55-inch 4K Ultra HD Smart TV with HDR and Dolby Vision.",
+//   "price": 1200,
+//   "salePrice": 999,
+//   "stock": 30,
+//   "sku": "UHDTV55",
+//   "brand": "60d21b4667d0d8992e610c99",
+//   "categoryId": "home-appliances",
 //   "productType": "physical",
+//   "isFeatured": true,
 //   "productAttributes": [
-//       {
-//           "name": "color",
-//           "values": [
-//               "red",
-//               "blue"
-//           ],
-//           "_id": "67c070411861a069a96b65e5"
-//       }
+//     {
+//       "name": "Screen Size",
+//       "values": ["50-inch", "55-inch", "65-inch"]
+//     },
+//     {
+//       "name": "Resolution",
+//       "values": ["4K", "8K"]
+//     }
 //   ],
 //   "productVariations": [
-//       {
-//           "sku": "var1",
-//           "image": "image1.jpg",
-//           "price": 99.99,
-//           "salePrice": 89.99,
-//           "stock": 10,
-//           "attributeValues": {
-//               "color": "red"
-//           },
-//           "_id": "67c070411861a069a96b65e6"
+//     {
+//       "sku": "UHDTV55-50INCH-4K",
+//       "price": 1200,
+//       "salePrice": 999,
+//       "stock": 15,
+//       "attributeValues": {
+//         "Screen Size": "50-inch",
+//         "Resolution": "4K"
 //       }
-//   ],
-//   "date": "2025-02-27T14:01:37.981Z",
-//   "createdAt": "2025-02-27T14:01:37.989Z",
-//   "updatedAt": "2025-02-27T14:01:37.989Z",
-//   "__v": 0
+//     }
+//   ]
 // }

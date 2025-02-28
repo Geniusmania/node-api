@@ -1,35 +1,21 @@
 const express = require('express');
 const bannerRoute = express.Router();
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 const Banner = require('../models/Banner');
-
-// Set up storage for banner uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const bannerDir = path.join(__dirname, '../uploads/banners');
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(bannerDir)) {
-      fs.mkdirSync(bannerDir, { recursive: true });
-    }
-    cb(null, bannerDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${file.fieldname}_${Date.now()}${path.extname(file.originalname)}`);
-  },
-});
-
-const upload = multer({ storage: storage });
+const { uploadBrandImage, deleteImage } = require('../utils/multer/multer');
 
 // Add a new banner
-bannerRoute.post('/addbanner', upload.single('image'), async (req, res) => {
+bannerRoute.post('/', uploadBrandImage.single('imageUrl'), async (req, res) => {
   try {
-    const { targetScreen, isActive } = req.body;
-    
-    // Fix the image URL to use the correct path
-    const imageUrl = `${req.protocol}://${req.get('host')}/uploads/banners/${req.file.filename}`;
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'Banner image is required'
+      });
+    }
 
+    const { targetScreen, isActive } = req.body;
+    const imageUrl = req.file.path;
+    
     const banner = new Banner({
       imageUrl,
       targetScreen,
@@ -38,10 +24,10 @@ bannerRoute.post('/addbanner', upload.single('image'), async (req, res) => {
 
     await banner.save();
     res.status(201).json({ 
-      message: 'Banner added successfully', 
-      imageUrl: imageUrl,//`${req.protocol}://${req.get('host')}${imageUrl}` ,
+      message: 'Banner added successfully',
+      imageUrl,
       targetScreen,
-        isActive
+      isActive
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -49,7 +35,7 @@ bannerRoute.post('/addbanner', upload.single('image'), async (req, res) => {
 });
 
 // Get all banners
-bannerRoute.get('/allbanners', async (req, res) => {
+bannerRoute.get('/', async (req, res) => {
   try {
     const banners = await Banner.find();
     res.json(banners);
@@ -69,14 +55,13 @@ bannerRoute.get('/activebanners', async (req, res) => {
 });
 
 // Update a banner
-bannerRoute.put('/updatebanner/:id', upload.single('image'), async (req, res) => {
+bannerRoute.put('/updatebanner/:id', uploadBrandImage.single('image'), async (req, res) => {
   try {
     const { targetScreen, isActive } = req.body;
     const updatedData = { targetScreen, isActive: isActive === 'true' };
 
     if (req.file) {
-      // Fix the image URL to use the correct path
-      updatedData.imageUrl = `/uploads/banners/${req.file.filename}`;
+      updatedData.imageUrl = req.file.path;
     }
 
     const updatedBanner = await Banner.findByIdAndUpdate(req.params.id, updatedData, { new: true });
@@ -85,7 +70,6 @@ bannerRoute.put('/updatebanner/:id', upload.single('image'), async (req, res) =>
       res.json({ 
         message: 'Banner updated successfully', 
         updatedBanner,
-        ImageUrl: req.file ? `${req.protocol}://${req.get('host')}${updatedData.imageUrl}` : null
       });
     } else {
       res.status(404).json({ message: 'Banner not found' });
@@ -100,11 +84,7 @@ bannerRoute.delete('/removebanner/:id', async (req, res) => {
   try {
     const deletedBanner = await Banner.findByIdAndDelete(req.params.id);
     if (deletedBanner) {
-      // Fix the path to correctly locate the image file
-      const imagePath = path.join(__dirname, '../uploads/banners', path.basename(deletedBanner.imageUrl));
-      fs.unlink(imagePath, (err) => {
-        if (err) console.error('Image deletion error:', err);
-      });
+      await deleteImage(deletedBanner.imageUrl);
       res.json({ message: 'Banner removed successfully' });
     } else {
       res.status(404).json({ message: 'Banner not found' });
