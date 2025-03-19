@@ -19,7 +19,7 @@ const transporter = nodemailer.createTransport({
 
 // Send verification email
 async function sendVerificationEmail(email, token) {
-  const verificationLink = `http://localhost:3000/api/auth/verify/${token}`;
+  const verificationLink = `https://node-api-3548.onrender.com/${token}`;
   const mailOptions = {
     from: `"Shoppy" <pbaidoo.pb10@gmail.com>`,
     to: email,
