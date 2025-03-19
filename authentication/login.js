@@ -137,13 +137,15 @@ authRoute.post('/login', async (req, res) => {
 
     if (user && (await user.matchPassword(password))) {
       res.json({message: 'Logged in succesfull',
-        _id: user._id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        username: user.username,
-        phone: user.phone,
-        isAdmin: user.isAdmin,
+        user: {
+          _id: user._id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          email: user.email,
+          username: user.username,
+          phone: user.phone,
+          isAdmin: user.isAdmin
+        },
         token: generateToken(user._id),
       });
     } else {
