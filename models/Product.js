@@ -1,7 +1,7 @@
 // models/Product.js
 const mongoose = require('mongoose');
 const productAttributeSchema = require('./ProductAttribute');
-const productVariationSchema = require('./productVariation');
+const productVariationSchema = require('./ProductVariation');
 
 const productSchema = new mongoose.Schema(
   {
