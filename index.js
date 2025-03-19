@@ -12,7 +12,7 @@ const orderRoute = require('./routes/Orders.js');
 const authRoute = require('./authentication/login.js');
 const categoryRouter = require('./routes/Category.js');
 const bannerRoute = require('./routes/Banner.js');
-const brandRoute = require('./routes/brand.js')
+const brandRoute = require('./routes/Brand.js')
 const path = require('path');
 const fs = require('fs');
 
