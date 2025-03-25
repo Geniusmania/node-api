@@ -71,14 +71,14 @@ app.use('/api/address', addressRouter);
 
 
 // Database connection and server startup
-mongoose.connect(process.env.MONGODB)
+mongoose.connect(process.env.mongoDB)
     .then(() => {
         console.log('MongoDB connected successfully');
         console.log('Server port:', process.env.PORT);
         console.log('JWT_SECRET configured:', !!process.env.JWT_SECRET);
         
         app.listen(port, () => {
-            console.log(`Server is running on port ${port}`);
+            console.log(`Server is running on port ${process.env.PORT}`);
         });
     })
     .catch(err => {
