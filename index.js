@@ -15,6 +15,7 @@ const bannerRoute = require('./routes/Banner.js');
 const brandRoute = require('./routes/Brand.js')
 const path = require('path');
 const fs = require('fs');
+const addressRouter = require('./routes/Address.js');
 
 // Load environment variables
 dotenv.config();
@@ -62,12 +63,15 @@ app.use('/api/category', categoryRouter);
 // Banner routes
 app.use('/api/banner', bannerRoute);
 
+//address routes
+app.use('/api/address', addressRouter);
+
 
 
 
 
 // Database connection and server startup
-mongoose.connect('mongodb+srv://pbaidoopb10:mania123@cluster0.gjnuz.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
+mongoose.connect(process.env.MONGODB)
     .then(() => {
         console.log('MongoDB connected successfully');
         console.log('Server port:', process.env.PORT);

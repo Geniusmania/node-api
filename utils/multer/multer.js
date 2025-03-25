@@ -23,17 +23,7 @@ const brandStorage = new CloudinaryStorage({
   }
 });
 
-// //storage for banners image
-// const bannerStorage = new CloudinaryStorage({
-//     cloudinary:cloudinary,
-//     params:{
-//         folder:'ecommerce/banner',
-//         allowed_formats: ['jpg', 'png', 'jpeg', 'webp', 'PNG','JPG','JPEG','WEBP'],
-//         transformation: [{ width: 1000, height: 500, crop: 'limit' }]
-//     }
-// })
 
-// Multer upload configurations
 
 const uploadProductImage = multer({ storage: productStorage });
 const uploadBrandImage = multer({ storage: brandStorage });

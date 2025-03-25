@@ -12,8 +12,8 @@ const transporter = nodemailer.createTransport({
   port: 465,
   secure: true,
   auth: {
-    user: "pbaidoo.pb10@gmail.com",
-    pass: "qzcxwuoiznhdyufr",
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
   },
 });
 
@@ -142,11 +142,12 @@ authRoute.post('/login', async (req, res) => {
           first_name: user.first_name,
           last_name: user.last_name,
           email: user.email,
+          password: user.password,
           username: user.username,
           phone: user.phone,
-          isAdmin: user.isAdmin
+          isAdmin: user.isAdmin || false,
         },
-        token: generateToken(user._id),
+        token:user ? generateToken(user._id) : '',
       });
     } else {
       res.status(401).json({ message: 'Invalid email or password' });
