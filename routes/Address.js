@@ -5,7 +5,7 @@ const User = require("../models/User");
 const protect = require("./middleware/Auth");
 
 // Get all addresses
-addressRouter.get("/",  async (req, res) => {
+addressRouter.get("/", async (req, res) => {
 	try {
 		const addresses = await Address.find({ user: req.user._id });
 		res.statusCode(200).json(addresses);
@@ -16,7 +16,7 @@ addressRouter.get("/",  async (req, res) => {
 });
 
 //post an address
-addressRouter.post("/",  async (req, res) => {
+addressRouter.post("/", async (req, res) => {
 	try {
 		const {
 			name,
@@ -29,7 +29,15 @@ addressRouter.post("/",  async (req, res) => {
 			country,
 		} = req.body;
 
-		if (!name || !city || !postalCode || !phoneNumber || !state || !street || !country) {
+		if (
+			!name ||
+			!city ||
+			!postalCode ||
+			!phoneNumber ||
+			!state ||
+			!street ||
+			!country
+		) {
 			return res.status(400).json({ error: "Please fill all fields" });
 		}
 		const address = new Address({
@@ -50,31 +58,33 @@ addressRouter.post("/",  async (req, res) => {
 		res.status(500).json({ message: error.message });
 	}
 });
-router.put("/:id", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { selected } = req.body;
-  
-      // Validate input
-      if (typeof selected !== "boolean") {
-        return res.status(400).json({ message: "Invalid selected value" });
-      }
-  
-      // Find and update the address
-      const updatedAddress = await Address.findByIdAndUpdate(
-        id,
-        { selected },
-        { new: true } // Returns the updated document
-      );
-  
-      if (!updatedAddress) {
-        return res.status(404).json({ message: "Address not found" });
-      }
-  
-      res.status(200).json({ message: "Address updated successfully", updatedAddress });
-    } catch (error) {
-      res.status(500).json({ message: "Server error", error: error.message });
-    }
-  });
+addressRouter.put("/:id", async (req, res) => {
+	try {
+		const { id } = req.params;
+		const { selected } = req.body;
+
+		// Validate input
+		if (typeof selected !== "boolean") {
+			return res.status(400).json({ message: "Invalid selected value" });
+		}
+
+		// Find and update the address
+		const updatedAddress = await Address.findByIdAndUpdate(
+			id,
+			{ selected },
+			{ new: true } // Returns the updated document
+		);
+
+		if (!updatedAddress) {
+			return res.status(404).json({ message: "Address not found" });
+		}
+
+		res
+			.status(200)
+			.json({ message: "Address updated successfully", updatedAddress });
+	} catch (error) {
+		res.status(500).json({ message: "Server error", error: error.message });
+	}
+});
 
 module.exports = addressRouter;
