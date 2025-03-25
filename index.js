@@ -2,7 +2,6 @@ const express = require('express');
 const { default: mongoose } = require('mongoose');
 const app = express();
 const cors = require('cors');
-const port = process.env.PORT || 3000;
 const bodyParser = require('body-parser');
 const dbseeder = require('./dbseeder.js');
 const dotenv = require('dotenv');
@@ -69,16 +68,16 @@ app.use('/api/address', addressRouter);
 
 
 
-
+const port = process.env.PORT;
 // Database connection and server startup
 mongoose.connect(process.env.mongoDB)
     .then(() => {
         console.log('MongoDB connected successfully');
-        console.log('Server port:', process.env.PORT);
+        
         console.log('JWT_SECRET configured:', !!process.env.JWT_SECRET);
         
         app.listen(port, () => {
-            console.log(`Server is running on port ${process.env.PORT}`);
+            console.log(`Server is running on port ${port}`);
         });
     })
     .catch(err => {
