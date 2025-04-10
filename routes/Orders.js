@@ -5,7 +5,7 @@ const Order = require("../models/Order");
 // const admin = require("../routes/middleware/Auth").admin;
 
 //Create a new order
-orderRouter.post("/", protect, async (req, res) => {
+orderRouter.post("/", async (req, res) => {
   try {
     const {
       address,
@@ -54,7 +54,7 @@ orderRouter.post("/", protect, async (req, res) => {
 });
 
 // Get all orders - Admin only route
-orderRouter.get("/",protect, async (req, res) => {
+orderRouter.get("/", async (req, res) => {
   try {
     const orders = await Order.find()
       .populate("userId", "first_name last_name email")
@@ -66,7 +66,7 @@ orderRouter.get("/",protect, async (req, res) => {
 });
 
 //Get specific order by ID
-orderRouter.get("/:id",protect, async (req, res) => {
+orderRouter.get("/:id", async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
       .populate("userId", "first_name last_name email")
@@ -88,7 +88,7 @@ orderRouter.get("/:id",protect, async (req, res) => {
 });
 
 //Delete an order
-orderRouter.delete("/:id",protect, async (req, res) => {
+orderRouter.delete("/:id", async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
 
@@ -109,7 +109,7 @@ orderRouter.delete("/:id",protect, async (req, res) => {
 });
 
 //Get orders for the currently logged-in user
-orderRouter.get("/user",protect, async (req, res) => {
+orderRouter.get("/user", async (req, res) => {
   try {
     const orders = await Order.find({ userId: req.user._id })
       .populate("items.product")
@@ -121,7 +121,7 @@ orderRouter.get("/user",protect, async (req, res) => {
 });
 
 //Update order status (admin only)
-orderRouter.put("/:id/status",protect, async (req, res) => {
+orderRouter.put("/:id/status", async (req, res) => {
   try {
     const { status } = req.body;
     
@@ -145,7 +145,7 @@ orderRouter.put("/:id/status",protect, async (req, res) => {
 });
 
 //Update order details (only if status is "pending")
-orderRouter.put("/:id",protect, async (req, res) => {
+orderRouter.put("/:id", async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     
@@ -186,7 +186,7 @@ orderRouter.put("/:id",protect, async (req, res) => {
 });
 
 //Get order statistics (admin only)
-orderRouter.get("/stats/summary",protect, async (req, res) => {
+orderRouter.get("/stats/summary", async (req, res) => {
   try {
     const totalOrders = await Order.countDocuments();
     
