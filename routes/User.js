@@ -1,7 +1,7 @@
 const express = require("express");
 const userRoute = express.Router();
 const User = require("../models/User");
-const bcrypt = require("bcryptjs");
+
 const generateToken = require("../tokens/TokenGenerate");
 const protect = require("./middleware/Auth");
 
